@@ -68,17 +68,17 @@ func (s *CpuacctGroup) GetStats(path string, stats *cgroups.Stats) error {
 		return err
 	}
 
-	PercpuUsageInUsermode, PercpuUsageInKernelmode, err := getPercpuUsageInModes(path)
+	PercpuUsageInKernelmode, PercpuUsageInUsermode, err := getPercpuUsageInModes(path)
 	if err != nil {
 		return err
 	}
 
 	stats.CpuStats.CpuUsage.TotalUsage = totalUsage
 	stats.CpuStats.CpuUsage.PercpuUsage = percpuUsage
+	stats.CpuStats.CpuUsage.PercpuUsageInKernelmode = PercpuUsageInKernelmode
+	stats.CpuStats.CpuUsage.PercpuUsageInUsermode = PercpuUsageInUsermode
 	stats.CpuStats.CpuUsage.UsageInUsermode = userModeUsage
 	stats.CpuStats.CpuUsage.UsageInKernelmode = kernelModeUsage
-	stats.CpuStats.CpuUsage.PercpuUsageInUsermode = PercpuUsageInUsermode
-	stats.CpuStats.CpuUsage.PercpuUsageInKernelmode = PercpuUsageInKernelmode
 	return nil
 }
 
@@ -135,12 +135,12 @@ func getPercpuUsage(path string) ([]uint64, error) {
 }
 
 func getPercpuUsageInModes(path string) ([]uint64, []uint64, error) {
-	percpuUsageUserMode := []uint64{}
 	percpuUsageKernelMode := []uint64{}
+	percpuUsageUserMode := []uint64{}
 
 	data, err := ioutil.ReadFile(filepath.Join(path, cgroupCpuacctUsageAll))
 	if err != nil {
-		return percpuUsageUserMode, percpuUsageKernelMode, err
+		return percpuUsageKernelMode, percpuUsageUserMode, err
 	}
 
 	lines := strings.Split(string(data), "\n")
@@ -152,17 +152,18 @@ func getPercpuUsageInModes(path string) ([]uint64, []uint64, error) {
 			continue
 		}
 
+		usageInKernelMode, err := strconv.ParseUint(lineFields[cpuacctUsageAllKernelLinePosition], 10, 64)
+		if err != nil {
+			return []uint64{}, []uint64{}, fmt.Errorf("Unable to convert param value to uint64: %s", err)
+		}
+		percpuUsageKernelMode = append(percpuUsageKernelMode, usageInKernelMode)
+
 		usageInUserMode, err := strconv.ParseUint(lineFields[cpuacctUsageAllUserLinePosition], 10, 64)
 		if err != nil {
 			return []uint64{}, []uint64{}, fmt.Errorf("Unable to convert param value to uint64: %s", err)
 		}
 		percpuUsageUserMode = append(percpuUsageUserMode, usageInUserMode)
 
-		usageInKernelMode, err := strconv.ParseUint(lineFields[cpuacctUsageAllKernelLinePosition], 10, 64)
-		if err != nil {
-			return []uint64{}, []uint64{}, fmt.Errorf("Unable to convert param value to uint64: %s", err)
-		}
-		percpuUsageKernelMode = append(percpuUsageKernelMode, usageInKernelMode)
 	}
-	return percpuUsageUserMode, percpuUsageKernelMode, nil
+	return percpuUsageKernelMode, percpuUsageUserMode, nil
 }
