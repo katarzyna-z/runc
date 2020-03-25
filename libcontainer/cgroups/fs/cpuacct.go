@@ -154,13 +154,13 @@ func getPercpuUsageInModes(path string) ([]uint64, []uint64, error) {
 
 		usageInKernelMode, err := strconv.ParseUint(lineFields[cpuacctUsageAllKernelLinePosition], 10, 64)
 		if err != nil {
-			return []uint64{}, []uint64{}, fmt.Errorf("Unable to convert param value to uint64: %s", err)
+			return []uint64{}, []uint64{}, fmt.Errorf("Unable to convert CPU usage in kernel mode to uint64: %s", err)
 		}
 		percpuUsageKernelMode = append(percpuUsageKernelMode, usageInKernelMode)
 
 		usageInUserMode, err := strconv.ParseUint(lineFields[cpuacctUsageAllUserLinePosition], 10, 64)
 		if err != nil {
-			return []uint64{}, []uint64{}, fmt.Errorf("Unable to convert param value to uint64: %s", err)
+			return []uint64{}, []uint64{}, fmt.Errorf("Unable to convert CPU usage in user mode to uint64: %s", err)
 		}
 		percpuUsageUserMode = append(percpuUsageUserMode, usageInUserMode)
 
