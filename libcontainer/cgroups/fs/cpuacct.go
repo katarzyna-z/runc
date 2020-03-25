@@ -120,3 +120,22 @@ func getPercpuUsage(path string) ([]uint64, error) {
 	}
 	return percpuUsage, nil
 }
+
+// func getPercpuUsageInModes(path string) ([]uint64, []unit64, error) {
+// 	percpuUsageKe := []uint64{}
+// 	data, err := ioutil.ReadFile(filepath.Join(path, "cpuacct.usage_all"))
+// 	if err != nil {
+// 		return percpuUsage, err
+// 	}
+
+// 	rawLines := strings.Split(data, "\n")
+
+// 	for _, value := range strings.Fields(string(data)) {
+// 		value, err := strconv.ParseUint(value, 10, 64)
+// 		if err != nil {
+// 			return percpuUsage, fmt.Errorf("Unable to convert param value to uint64: %s", err)
+// 		}
+// 		percpuUsage = append(percpuUsage, value)
+// 	}
+// 	return percpuUsage, nil
+// }

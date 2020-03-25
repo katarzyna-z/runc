@@ -121,3 +121,27 @@ func expectMemoryDataEquals(t *testing.T, expected, actual cgroups.MemoryData) {
 		t.Fail()
 	}
 }
+
+func expectCPUUsageStatsEqual(t *testing.T, expected, actual cgroups.CpuUsage) {
+	if expected.TotalUsage != actual.TotalUsage {
+		logrus.Printf("Expected CPU total usage %d but found %d\n", expected.TotalUsage, actual.TotalUsage)
+		t.Fail()
+	}
+
+	for cpuID, actualCPUUsage := range actual.PercpuUsage {
+		if expected.PercpuUsage[cpuID] != actualCPUUsage {
+			logrus.Printf("Expected CPU%d usage %d but found %d\n", cpuID, expected.PercpuUsage[cpuID], actualCPUUsage)
+			t.Fail()
+		}
+	}
+
+	if expected.UsageInKernelmode != actual.UsageInKernelmode {
+		logrus.Printf("Expected CPU usage in kernel mode %d but found %d\n", expected.UsageInKernelmode, actual.UsageInKernelmode)
+		t.Fail()
+	}
+
+	if expected.UsageInUsermode != actual.UsageInUsermode {
+		logrus.Printf("Expected CPU usage in user mode %d but found %d\n", expected.UsageInUsermode, actual.UsageInUsermode)
+		t.Fail()
+	}
+}
