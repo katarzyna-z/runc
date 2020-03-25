@@ -16,8 +16,14 @@ import (
 )
 
 const (
-	cgroupCpuacctStat   = "cpuacct.stat"
+	cgroupCpuacctStat     = "cpuacct.stat"
+	cgroupCpuacctUsageAll = "cpuacct.usage_all"
+
 	nanosecondsInSecond = 1000000000
+
+	cpuacctUsageAllHeaderLineNo       = 1
+	cpuacctUsageAllUserLinePosition   = 1
+	cpuacctUsageAllKernelLinePosition = 2
 )
 
 var clockTicks = uint64(system.GetClockTicks())
@@ -62,10 +68,17 @@ func (s *CpuacctGroup) GetStats(path string, stats *cgroups.Stats) error {
 		return err
 	}
 
+	PercpuUsageInUsermode, PercpuUsageInKernelmode, err := getPercpuUsageInModes(path)
+	if err != nil {
+		return err
+	}
+
 	stats.CpuStats.CpuUsage.TotalUsage = totalUsage
 	stats.CpuStats.CpuUsage.PercpuUsage = percpuUsage
 	stats.CpuStats.CpuUsage.UsageInUsermode = userModeUsage
 	stats.CpuStats.CpuUsage.UsageInKernelmode = kernelModeUsage
+	stats.CpuStats.CpuUsage.PercpuUsageInUsermode = PercpuUsageInUsermode
+	stats.CpuStats.CpuUsage.PercpuUsageInKernelmode = PercpuUsageInKernelmode
 	return nil
 }
 
@@ -121,21 +134,35 @@ func getPercpuUsage(path string) ([]uint64, error) {
 	return percpuUsage, nil
 }
 
-// func getPercpuUsageInModes(path string) ([]uint64, []unit64, error) {
-// 	percpuUsageKe := []uint64{}
-// 	data, err := ioutil.ReadFile(filepath.Join(path, "cpuacct.usage_all"))
-// 	if err != nil {
-// 		return percpuUsage, err
-// 	}
+func getPercpuUsageInModes(path string) ([]uint64, []uint64, error) {
+	percpuUsageUserMode := []uint64{}
+	percpuUsageKernelMode := []uint64{}
 
-// 	rawLines := strings.Split(data, "\n")
+	data, err := ioutil.ReadFile(filepath.Join(path, cgroupCpuacctUsageAll))
+	if err != nil {
+		return percpuUsageUserMode, percpuUsageKernelMode, err
+	}
 
-// 	for _, value := range strings.Fields(string(data)) {
-// 		value, err := strconv.ParseUint(value, 10, 64)
-// 		if err != nil {
-// 			return percpuUsage, fmt.Errorf("Unable to convert param value to uint64: %s", err)
-// 		}
-// 		percpuUsage = append(percpuUsage, value)
-// 	}
-// 	return percpuUsage, nil
-// }
+	lines := strings.Split(string(data), "\n")
+	lines = lines[cpuacctUsageAllHeaderLineNo:] //omit header line
+
+	for _, line := range lines {
+		lineFields := strings.Fields(strings.TrimSpace(string(line)))
+		if len(lineFields) == 0 {
+			continue
+		}
+
+		usageInUserMode, err := strconv.ParseUint(lineFields[cpuacctUsageAllUserLinePosition], 10, 64)
+		if err != nil {
+			return []uint64{}, []uint64{}, fmt.Errorf("Unable to convert param value to uint64: %s", err)
+		}
+		percpuUsageUserMode = append(percpuUsageUserMode, usageInUserMode)
+
+		usageInKernelMode, err := strconv.ParseUint(lineFields[cpuacctUsageAllKernelLinePosition], 10, 64)
+		if err != nil {
+			return []uint64{}, []uint64{}, fmt.Errorf("Unable to convert param value to uint64: %s", err)
+		}
+		percpuUsageKernelMode = append(percpuUsageKernelMode, usageInKernelMode)
+	}
+	return percpuUsageUserMode, percpuUsageKernelMode, nil
+}
