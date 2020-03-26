@@ -131,3 +131,41 @@ func expectPageUsageByNUMAEquals(t *testing.T, expected, actual cgroups.PageUsag
 		t.Errorf("Expected hierarchical total page usage by NUMA %#v but found %#v", expected.Hierarchical.Unevictable, actual.Hierarchical.Unevictable)
 	}
 }
+
+func expectCPUUsageEqual(t *testing.T, expected, actual cgroups.CpuUsage) {
+	if expected.TotalUsage != actual.TotalUsage {
+		t.Errorf("Expected CPU total usage %d but found %d\n",
+			expected.TotalUsage, actual.TotalUsage)
+	}
+
+	for cpuID, actualCPUUsage := range actual.PercpuUsage {
+		if expected.PercpuUsage[cpuID] != actualCPUUsage {
+			t.Errorf("Expected CPU%d usage %d but found %d\n",
+				cpuID, expected.PercpuUsage[cpuID], actualCPUUsage)
+		}
+	}
+
+	for cpuID, actualKernelModeUsage := range actual.PercpuUsageInKernelmode {
+		if expected.PercpuUsageInKernelmode[cpuID] != actualKernelModeUsage {
+			t.Errorf("Expected CPU%d usage in kernel mode %d but found %d\n",
+				cpuID, expected.PercpuUsageInKernelmode[cpuID], actualKernelModeUsage)
+		}
+	}
+
+	for cpuID, actualUserModeUsage := range actual.PercpuUsageInUsermode {
+		if expected.PercpuUsageInUsermode[cpuID] != actualUserModeUsage {
+			t.Errorf("Expected CPU%d usage in user mode %d but found %d\n",
+				cpuID, expected.PercpuUsageInUsermode[cpuID], actualUserModeUsage)
+		}
+	}
+
+	if expected.UsageInKernelmode != actual.UsageInKernelmode {
+		t.Errorf("Expected CPU usage in kernel mode %d but found %d\n",
+			expected.UsageInKernelmode, actual.UsageInKernelmode)
+	}
+
+	if expected.UsageInUsermode != actual.UsageInUsermode {
+		t.Errorf("Expected CPU usage in user mode %d but found %d\n",
+			expected.UsageInUsermode, actual.UsageInUsermode)
+	}
+}
