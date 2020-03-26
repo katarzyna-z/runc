@@ -3,8 +3,10 @@
 package fs
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -21,9 +23,9 @@ const (
 
 	nanosecondsInSecond = 1000000000
 
-	cpuacctUsageAllHeaderLineNo       = 1
-	cpuacctUsageAllUserLinePosition   = 1
-	cpuacctUsageAllKernelLinePosition = 2
+	userModeColumn              = 1
+	kernelModeColumn            = 2
+	cuacctUsageAllColumnsNumber = 3
 )
 
 var clockTicks = uint64(system.GetClockTicks())
@@ -138,32 +140,38 @@ func getPercpuUsageInModes(path string) ([]uint64, []uint64, error) {
 	percpuUsageKernelMode := []uint64{}
 	percpuUsageUserMode := []uint64{}
 
-	data, err := ioutil.ReadFile(filepath.Join(path, cgroupCpuacctUsageAll))
+	file, err := os.Open(filepath.Join(path, cgroupCpuacctUsageAll))
 	if err != nil {
-		return percpuUsageKernelMode, percpuUsageUserMode, err
+		return []uint64{}, []uint64{}, err
 	}
+	defer file.Close()
 
-	lines := strings.Split(string(data), "\n")
-	lines = lines[cpuacctUsageAllHeaderLineNo:] //omit header line
+	scanner := bufio.NewScanner(file)
+	scanner.Scan() //skipping header line
 
-	for _, line := range lines {
-		lineFields := strings.Fields(strings.TrimSpace(string(line)))
-		if len(lineFields) == 0 {
+	for scanner.Scan() {
+		lineFields := strings.Fields(scanner.Text())
+
+		if len(lineFields) != cuacctUsageAllColumnsNumber {
 			continue
 		}
 
-		usageInKernelMode, err := strconv.ParseUint(lineFields[cpuacctUsageAllKernelLinePosition], 10, 64)
+		usageInKernelMode, err := strconv.ParseUint(lineFields[kernelModeColumn], 10, 64)
 		if err != nil {
 			return []uint64{}, []uint64{}, fmt.Errorf("Unable to convert CPU usage in kernel mode to uint64: %s", err)
 		}
 		percpuUsageKernelMode = append(percpuUsageKernelMode, usageInKernelMode)
 
-		usageInUserMode, err := strconv.ParseUint(lineFields[cpuacctUsageAllUserLinePosition], 10, 64)
+		usageInUserMode, err := strconv.ParseUint(lineFields[userModeColumn], 10, 64)
 		if err != nil {
 			return []uint64{}, []uint64{}, fmt.Errorf("Unable to convert CPU usage in user mode to uint64: %s", err)
 		}
 		percpuUsageUserMode = append(percpuUsageUserMode, usageInUserMode)
-
 	}
+
+	if err := scanner.Err(); err != nil {
+		return []uint64{}, []uint64{}, fmt.Errorf("Problem in reading %s line by line, %s", cgroupCpuacctUsageAll, err)
+	}
+
 	return percpuUsageKernelMode, percpuUsageUserMode, nil
 }
